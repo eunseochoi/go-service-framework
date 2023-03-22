@@ -3,6 +3,7 @@ package pool
 import (
 	"context"
 	"errors"
+	"github.com/datadaodevs/go-service-framework/utils"
 	"github.com/segmentio/ksuid"
 	"sync"
 )
