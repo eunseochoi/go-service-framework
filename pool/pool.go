@@ -3,6 +3,7 @@ package pool
 import (
 	"context"
 	"errors"
+	"github.com/datadaodevs/go-service-framework/util"
 	"github.com/segmentio/ksuid"
 	"sync"
 )
@@ -28,7 +29,7 @@ type WorkerPool struct {
 	cancel           context.CancelFunc
 	throttler        *Throttler
 	useOutputCh      bool
-	logger           Logger
+	logger           util.Logger
 }
 
 // NewWorkerPool instantiates a worker pool with default options

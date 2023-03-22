@@ -1,4 +1,4 @@
-package pool
+package utils
 
 type Logger interface {
 	Error(...interface{})
