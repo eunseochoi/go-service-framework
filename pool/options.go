@@ -1,5 +1,7 @@
 package pool
 
+import "github.com/coherent-api/data-platform/shared/go/utils"
+
 type opt func(wp *WorkerPool)
 
 // WithOutputChannel configures the WorkerPool to push results to a channel for external consumption
@@ -24,7 +26,7 @@ func WithBandwidth(bandwidth int) opt {
 }
 
 // WithLogger overrides the default logger
-func WithLogger(logger Logger) opt {
+func WithLogger(logger utils.Logger) opt {
 	return func(wp *WorkerPool) {
 		wp.logger = logger
 	}
