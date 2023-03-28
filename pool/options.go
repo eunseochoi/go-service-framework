@@ -1,6 +1,6 @@
 package pool
 
-import "github.com/datadaodevs/go-service-framework/utils"
+import "github.com/datadaodevs/go-service-framework/util"
 
 type opt func(wp *WorkerPool)
 
@@ -26,7 +26,7 @@ func WithBandwidth(bandwidth int) opt {
 }
 
 // WithLogger overrides the default logger
-func WithLogger(logger utils.Logger) opt {
+func WithLogger(logger util.Logger) opt {
 	return func(wp *WorkerPool) {
 		wp.logger = logger
 	}

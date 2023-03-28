@@ -1,4 +1,4 @@
-package utils
+package util
 
 import "github.com/DataDog/datadog-go/v5/statsd"
 

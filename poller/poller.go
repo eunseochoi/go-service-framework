@@ -3,7 +3,7 @@ package poller
 import (
 	"context"
 	"github.com/datadaodevs/go-service-framework/pool"
-	"github.com/datadaodevs/go-service-framework/utils"
+	"github.com/datadaodevs/go-service-framework/util"
 	"sync"
 	"time"
 )
@@ -20,8 +20,8 @@ const (
 // Poller is a chain-agnostic module for ETLing blockchain data, utilizing worker pools to optimize
 // efficiency and speed
 type Poller struct {
-	logger         utils.Logger
-	metrics        utils.Metrics
+	logger         util.Logger
+	metrics        util.Metrics
 	cfg            *PollerConfig
 	mode           int
 	driver         Driver
