@@ -2,7 +2,7 @@ package poller
 
 import (
 	"github.com/datadaodevs/go-service-framework/pool"
-	"github.com/datadaodevs/go-service-framework/utils"
+	"github.com/datadaodevs/go-service-framework/util"
 )
 
 type opt func(p *Poller)
@@ -27,12 +27,12 @@ func WithCache(c Cache) opt {
 		p.cache = c
 	}
 }
-func WithLogger(logger utils.Logger) opt {
+func WithLogger(logger util.Logger) opt {
 	return func(p *Poller) {
 		p.logger = logger
 	}
 }
-func WithMetrics(metrics utils.Metrics) opt {
+func WithMetrics(metrics util.Metrics) opt {
 	return func(p *Poller) {
 		p.metrics = metrics
 	}
