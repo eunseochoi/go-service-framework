@@ -2,7 +2,7 @@ module github.com/datadaodevs/go-service-framework
 
 go 1.20
 
-replace github.com/datadaodevs/go-service-framework => /Users/robin/src/coherent/go-service-framework
+replace github.com/datadaodevs/go-service-framework => /Users/robinarenson/src/coherent/go-service-framework
 
 require (
 	github.com/DataDog/datadog-go/v5 v5.3.0
