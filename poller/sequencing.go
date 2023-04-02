@@ -59,7 +59,6 @@ func (p *Poller) setCurrentChaintip(ctx context.Context, newTip uint64) error {
 
 // getRemoteChaintip pulls the remote chaintip value
 func (p *Poller) getRemoteChaintip(ctx context.Context) (uint64, error) {
-	fmt.Println("here!")
 	var chainTip uint64
 	var err error
 	retry.Exec(p.cfg.HttpRetries, func() error {
