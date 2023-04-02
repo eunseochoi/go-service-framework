@@ -52,29 +52,22 @@ func (p *Poller) getCurrentChaintip(ctx context.Context) (uint64, error) {
 // setCurrentChaintip overwrites the current cached local chaintip value
 func (p *Poller) setCurrentChaintip(ctx context.Context, newTip uint64) error {
 	blockRedisKey := fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
-	return retry.Exec(p.cfg.HttpRetries, func(attempt int) (bool, error) {
-		err := p.cache.SetCurrentBlockNumber(ctx, blockRedisKey, newTip)
-		if err != nil {
-			exp := time.Duration(2 ^ (attempt - 1))
-			time.Sleep(exp * time.Second)
-		}
-		return attempt < p.cfg.HttpRetries, err
-	})
+	return retry.Exec(p.cfg.HttpRetries, func() error {
+		return p.cache.SetCurrentBlockNumber(ctx, blockRedisKey, newTip)
+	}, nil)
 }
 
 // getRemoteChaintip pulls the remote chaintip value
 func (p *Poller) getRemoteChaintip(ctx context.Context) (uint64, error) {
 	var chainTip uint64
 	var err error
-	err = retry.Exec(p.cfg.HttpRetries, func(attempt int) (bool, error) {
-		var err error
+	retry.Exec(p.cfg.HttpRetries, func() error {
 		chainTip, err = p.driver.GetChainTipNumber(ctx)
 		if err != nil {
-			exp := time.Duration(2 ^ (attempt - 1))
-			time.Sleep(exp * time.Second)
+			return err
 		}
-		return attempt < p.cfg.HttpRetries, err
-	})
+		return nil
+	}, nil)
 	return chainTip, err
 }
 

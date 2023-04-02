@@ -1,24 +1,33 @@
 package retry
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 var errMaxRetriesReached = errors.New("exceeded retry limit")
 
-type Func func(attempt int) (retry bool, err error)
+type RunnerFunc func() error
+type SleeperFunc func(attempt int)
 
-func Exec(maxRetries int, fn Func) error {
+func Exec(maxRetries int, fn RunnerFunc, sleep SleeperFunc) error {
+	if sleep == nil {
+		sleep = DefaultSleeper
+	}
 	var err error
-	var cont bool
 	attempt := 1
 	for {
-		cont, err = fn(attempt)
-		if !cont || err == nil {
-			break
-		}
-		attempt++
-		if attempt > maxRetries {
-			return errMaxRetriesReached
+		if err = fn(); err != nil {
+			attempt++
+			if attempt > maxRetries {
+				break
+			}
+			sleep(attempt)
 		}
 	}
 	return err
+}
+func DefaultSleeper(attempt int) {
+	exp := time.Duration(2 ^ (attempt - 1))
+	time.Sleep(exp * time.Second)
 }
