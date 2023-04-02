@@ -47,6 +47,7 @@ func New(cfg *PollerConfig, driver Driver, opts ...opt) *Poller {
 // Run executes the main program loop inside of a dedicated goroutine; the loop can be terminated from the
 // outside via context cancellation
 func (p *Poller) Run(ctx context.Context) error {
+	p.logger.Infof("Main poller worker starting for blockchain [%s]", p.driver.Blockchain())
 	go func() {
 		for {
 			//	Check for context cancellation
@@ -64,6 +65,8 @@ func (p *Poller) Run(ctx context.Context) error {
 				p.logger.Errorf("Error setting mode: %v", err)
 				continue
 			}
+
+			p.logger.Infof("Top of main loop; mode is [%s]", p.mode)
 
 			switch p.mode {
 			case ModeSleep:
