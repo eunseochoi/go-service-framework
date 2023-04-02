@@ -17,13 +17,16 @@ func Exec(maxRetries int, fn RunnerFunc, sleep SleeperFunc) error {
 	var err error
 	attempt := 1
 	for {
-		if err = fn(); err != nil {
-			attempt++
-			if attempt > maxRetries {
-				break
-			}
-			sleep(attempt)
+		err = fn()
+		if err == nil {
+			return nil
 		}
+		attempt++
+		if attempt > maxRetries {
+			break
+		}
+		sleep(attempt)
+		continue
 	}
 	return err
 }
