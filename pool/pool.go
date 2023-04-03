@@ -72,7 +72,7 @@ func (wp *WorkerPool) Start(parentCtx context.Context) error {
 }
 
 // Stop performs a graceful shutdown of all workers
-func (wp *WorkerPool) Stop(ctx context.Context) {
+func (wp *WorkerPool) Stop() {
 	wp.cancel()
 	wp.workerWg.Wait()
 }

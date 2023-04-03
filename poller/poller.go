@@ -29,6 +29,7 @@ type Poller struct {
 	fetchPool      *pool.WorkerPool
 	accumulatePool *pool.WorkerPool
 	writePool      *pool.WorkerPool
+	cancelFunc     context.CancelFunc
 }
 
 // New constructs a new poller, given a config, a chain-specific driver, and a variadic array of options
@@ -46,7 +47,10 @@ func New(cfg *Config, driver Driver, opts ...opt) *Poller {
 
 // Run executes the main program loop inside of a dedicated goroutine; the loop can be terminated from the
 // outside via context cancellation
-func (p *Poller) Run(ctx context.Context) error {
+func (p *Poller) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	p.cancelFunc = cancel
+
 	p.logger.Infof("Main poller worker starting for blockchain [%s]", p.driver.Blockchain())
 	go func() {
 		for {
@@ -66,7 +70,7 @@ func (p *Poller) Run(ctx context.Context) error {
 				continue
 			}
 
-			p.logger.Infof("Top of main loop; mode is [%s]", p.mode)
+			p.logger.Infof("Top of main loop; mode is [%s]", modeToString(p.mode))
 
 			switch p.mode {
 			case ModeSleep:
@@ -113,6 +117,10 @@ func (p *Poller) Run(ctx context.Context) error {
 	}()
 
 	return nil
+}
+
+func (p *Poller) Stop() {
+	p.cancelFunc()
 }
 
 func (p *Poller) Mode() int {
