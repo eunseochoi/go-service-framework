@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 )
@@ -94,6 +96,10 @@ func (m *Manager) Logger() util.Logger {
 	return m.logger
 }
 
+func (m *Manager) ForceKill() {
+	m.shutdownFunc()
+}
+
 func (m *Manager) WaitForInterrupt() {
 	m.startBackgroundServices()
 	m.startHTTPServers()
@@ -102,10 +108,21 @@ func (m *Manager) WaitForInterrupt() {
 	aliveCtx, cancel := context.WithCancel(m.svcContext)
 	m.shutdownFunc = cancel
 
-	log.Info("Waiting for interrupt")
-	<-aliveCtx.Done()
-	timer := time.NewTimer(20 * time.Second)
+	//	Attach to OS
+	notifyChannel := make(chan os.Signal, 1)
+	defer close(notifyChannel)
+	signal.Notify(notifyChannel, os.Interrupt)
+	signal.Notify(notifyChannel, os.Kill)
 
+	log.Info("Waiting for interrupt")
+	select {
+	case <-aliveCtx.Done():
+		log.Warn("Manual force kill signal received")
+	case sig := <-notifyChannel:
+		log.Warnf("OS signal received: %s", sig.String())
+	}
+
+	timer := time.NewTimer(20 * time.Second)
 	select {
 	case <-m.attemptGracefulShutdown():
 		log.Info("Graceful shutdown succeeded")
