@@ -16,6 +16,10 @@ const (
 // with a receipt signal
 type WorkerPool struct {
 	id               string
+	countWaiting     int
+	countInProgress  int
+	waitingMu        *sync.Mutex
+	inProgressMu     *sync.Mutex
 	groups           map[string]*group
 	groupMu          *sync.Mutex
 	workerWg         *sync.WaitGroup
@@ -35,11 +39,13 @@ type WorkerPool struct {
 // NewWorkerPool instantiates a worker pool with default options
 func NewWorkerPool(id string, opts ...opt) *WorkerPool {
 	wp := WorkerPool{
-		id:        id,
-		groups:    map[string]*group{},
-		groupMu:   &sync.Mutex{},
-		workerWg:  &sync.WaitGroup{},
-		bandwidth: defaultBandwidth,
+		id:           id,
+		groups:       map[string]*group{},
+		groupMu:      &sync.Mutex{},
+		workerWg:     &sync.WaitGroup{},
+		inProgressMu: &sync.Mutex{},
+		waitingMu:    &sync.Mutex{},
+		bandwidth:    defaultBandwidth,
 	}
 	wp.errHandler = wp.defaultErrHandler
 	for _, opt := range opts {
@@ -72,7 +78,7 @@ func (wp *WorkerPool) Start(parentCtx context.Context) error {
 }
 
 // Stop performs a graceful shutdown of all workers
-func (wp *WorkerPool) Stop(ctx context.Context) {
+func (wp *WorkerPool) Stop() {
 	wp.cancel()
 	wp.workerWg.Wait()
 }
@@ -150,8 +156,11 @@ func (wp *WorkerPool) startJobWorkers(ctx context.Context) {
 					return
 				case job := <-wp.jobCh:
 					if wp.throttler != nil {
+						wp.incrWaiting()
 						wp.throttler.WaitForGo()
+						wp.decrWaiting()
 					}
+					wp.incrInProgress()
 					switch {
 					case job.groupID != "":
 						res, err := job.fn(ctx)
@@ -167,6 +176,7 @@ func (wp *WorkerPool) startJobWorkers(ctx context.Context) {
 						}
 					}
 				}
+				wp.decrInProgress()
 			}
 		}(ctx)
 	}
@@ -213,12 +223,15 @@ func (wp *WorkerPool) processGroupResult(groupID string, jobID string, res inter
 		//	if this is an error, push the error and exit
 		if err != nil {
 			wp.errCh <- err
+			delete(wp.groups, groupID)
 			return
 		}
 
 		if wp.useOutputCh {
 			wp.resultCh <- ResultSet(group.results)
 		}
+
+		delete(wp.groups, groupID)
 	}
 }
 

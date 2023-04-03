@@ -2,10 +2,9 @@ package poller
 
 import (
 	"context"
-	"fmt"
-	"github.com/datadaodevs/go-service-framework/constants"
 	"github.com/datadaodevs/go-service-framework/retry"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -13,9 +12,16 @@ import (
 // should run in backfill mode, chaintip mode, or sleep mode (if not enough blocks are finalized), then
 // returns the current cursor
 func (p *Poller) setModeAndGetCursor(ctx context.Context) (uint64, error) {
-	currentTip, err := p.getCurrentChaintip(ctx)
+	p.modeMu.Lock()
+	defer p.modeMu.Unlock()
+
+	cursor, err := p.getCurrentChaintip(ctx)
 	if err != nil {
 		return 0, errors.Errorf("Error getting current chaintip: %v", err)
+	}
+
+	if p.mode == ModePaused || p.mode == ModeSleep {
+		return cursor, nil
 	}
 
 	chainTip, err := p.getRemoteChaintip(ctx)
@@ -23,25 +29,28 @@ func (p *Poller) setModeAndGetCursor(ctx context.Context) (uint64, error) {
 		return 0, errors.Errorf("Error getting remote chaintip: %v", err)
 	}
 
-	// Skip rpc calls when blocks are not yet finalized
-	if currentTip+uint64(p.cfg.BatchSize)+uint64(p.cfg.ReorgDepth) > chainTip {
+	maxBlock := chainTip - uint64(p.cfg.ReorgDepth)
+	distanceToMaxBlock := maxBlock - cursor
+
+	switch {
+	//	Cursor is within reorg
+	case cursor >= maxBlock:
 		p.setSleepMode()
-		return 0, errors.New("Blocks are not yet finalized")
-	}
-
-	//	Determine whether we're in range of chain tip and need a smaller batch size
-	p.mode = ModeBackfill
-	if chainTip-currentTip <= uint64(p.cfg.BatchSize) {
+		log.Warn("Cursor is within reorg range; poller going to sleep")
+	// Cursor is close enough that we should be in Chaintip mode
+	case distanceToMaxBlock < uint64(p.cfg.BatchSize):
 		p.mode = ModeChaintip
+	//	Cursor is distant enough from chaintip that we can pull batches
+	default:
+		p.mode = ModeBackfill
 	}
 
-	return currentTip, nil
+	return cursor, nil
 }
 
 // getCurrentChaintip pulls the current local chaintip from cache
 func (p *Poller) getCurrentChaintip(ctx context.Context) (uint64, error) {
-	blockRedisKey := fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
-	currentTip, err := p.cache.GetCurrentBlockNumber(ctx, blockRedisKey)
+	currentTip, err := p.cache.GetCurrentBlockNumber(ctx, p.cacheKey())
 	if err != nil {
 		p.logger.Errorf("error thrown getting chain tip from redis: %v", err)
 		return 0, err
@@ -51,9 +60,8 @@ func (p *Poller) getCurrentChaintip(ctx context.Context) (uint64, error) {
 
 // setCurrentChaintip overwrites the current cached local chaintip value
 func (p *Poller) setCurrentChaintip(ctx context.Context, newTip uint64) error {
-	blockRedisKey := fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
 	return retry.Exec(p.cfg.HttpRetries, func() error {
-		return p.cache.SetCurrentBlockNumber(ctx, blockRedisKey, newTip)
+		return p.cache.SetCurrentBlockNumber(ctx, p.cacheKey(), newTip)
 	}, nil)
 }
 
@@ -76,7 +84,11 @@ func (p *Poller) getRemoteChaintip(ctx context.Context) (uint64, error) {
 func (p *Poller) setSleepMode() {
 	p.mode = ModeSleep
 	go func() {
-		time.Sleep(time.Duration(p.cfg.SleepTime) * time.Second)
-		p.mode = ModeReady
+		select {
+		case <-p.runCtx.Done():
+			return
+		case <-time.Tick(p.cfg.SleepTime):
+			p.mode = ModeReady
+		}
 	}()
 }
