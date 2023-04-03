@@ -22,7 +22,7 @@ const (
 type Poller struct {
 	logger         util.Logger
 	metrics        util.Metrics
-	cfg            *PollerConfig
+	cfg            *Config
 	mode           int
 	driver         Driver
 	cache          Cache
@@ -32,7 +32,7 @@ type Poller struct {
 }
 
 // New constructs a new poller, given a config, a chain-specific driver, and a variadic array of options
-func New(cfg *PollerConfig, driver Driver, opts ...opt) *Poller {
+func New(cfg *Config, driver Driver, opts ...opt) *Poller {
 	p := Poller{cfg: cfg, driver: driver}
 	for _, opt := range opts {
 		opt(&p)
