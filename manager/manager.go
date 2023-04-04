@@ -31,18 +31,19 @@ type grpcSrv struct {
 type backgroundSvcStarter func(ctx context.Context) error
 type backgroundSvcStopper func()
 type Manager struct {
-	svcContext       context.Context
-	svcContextCancel context.CancelFunc
-	shutdownFunc     context.CancelFunc
-	wg               sync.WaitGroup
-	backgroundSvc    map[string]*backgroundSvc
-	httpSrvs         map[string]*httpSrv
-	grpcSrvs         map[string]*grpcSrv
-	logger           util.Logger
-	metrics          util.Metrics
+	useGracefulShutdown bool
+	svcContext          context.Context
+	svcContextCancel    context.CancelFunc
+	shutdownFunc        context.CancelFunc
+	wg                  sync.WaitGroup
+	backgroundSvc       map[string]*backgroundSvc
+	httpSrvs            map[string]*httpSrv
+	grpcSrvs            map[string]*grpcSrv
+	logger              util.Logger
+	metrics             util.Metrics
 }
 
-func New() *Manager {
+func New(opts ...opt) *Manager {
 	parent := context.Background()
 	ctx, cancel := context.WithCancel(parent)
 
@@ -51,14 +52,20 @@ func New() *Manager {
 	logger := mustInitLogger(cfg)
 
 	m := Manager{
-		svcContext:       ctx,
-		svcContextCancel: cancel,
-		backgroundSvc:    map[string]*backgroundSvc{},
-		httpSrvs:         map[string]*httpSrv{},
-		grpcSrvs:         map[string]*grpcSrv{},
-		logger:           logger,
-		metrics:          metrics,
+		useGracefulShutdown: true,
+		svcContext:          ctx,
+		svcContextCancel:    cancel,
+		backgroundSvc:       map[string]*backgroundSvc{},
+		httpSrvs:            map[string]*httpSrv{},
+		grpcSrvs:            map[string]*grpcSrv{},
+		logger:              logger,
+		metrics:             metrics,
 	}
+
+	for _, opt := range opts {
+		opt(&m)
+	}
+
 	return &m
 }
 
@@ -120,6 +127,13 @@ func (m *Manager) WaitForInterrupt() {
 		log.Warn("Manual force kill signal received")
 	case sig := <-notifyChannel:
 		log.Warnf("OS signal received: %s", sig.String())
+	}
+
+	if !m.useGracefulShutdown {
+		log.Warn("Graceful shutdown disabled; force-killing all services")
+		m.svcContextCancel()
+		log.Info("Manager exiting")
+		return
 	}
 
 	timer := time.NewTimer(20 * time.Second)

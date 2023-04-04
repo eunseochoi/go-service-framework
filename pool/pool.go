@@ -16,6 +16,7 @@ const (
 // with a receipt signal
 type WorkerPool struct {
 	id               string
+	parentCtx        context.Context
 	countWaiting     int
 	countInProgress  int
 	waitingMu        *sync.Mutex
@@ -39,22 +40,14 @@ type WorkerPool struct {
 // NewWorkerPool instantiates a worker pool with default options
 func NewWorkerPool(id string, opts ...opt) *WorkerPool {
 	wp := WorkerPool{
-		id:           id,
-		groups:       map[string]*group{},
-		groupMu:      &sync.Mutex{},
-		workerWg:     &sync.WaitGroup{},
-		inProgressMu: &sync.Mutex{},
-		waitingMu:    &sync.Mutex{},
-		bandwidth:    defaultBandwidth,
+		id:        id,
+		bandwidth: defaultBandwidth,
 	}
 	wp.errHandler = wp.defaultErrHandler
 	for _, opt := range opts {
 		opt(&wp)
 	}
-
-	wp.jobCh = make(chan job, wp.bandwidth)
-	wp.errCh = make(chan error, wp.bandwidth)
-	wp.resultCh = make(chan interface{}, wp.bandwidth)
+	wp.refreshControls()
 
 	return &wp
 }
@@ -67,6 +60,7 @@ func (wp *WorkerPool) Start(parentCtx context.Context) error {
 		return errors.New("Logger not configured")
 	}
 
+	wp.parentCtx = parentCtx
 	innerCtx, cancel := context.WithCancel(parentCtx)
 	wp.cancel = cancel
 
@@ -77,10 +71,30 @@ func (wp *WorkerPool) Start(parentCtx context.Context) error {
 	return nil
 }
 
+func (wp *WorkerPool) refreshControls() {
+	wp.groups = map[string]*group{}
+	wp.groupMu = &sync.Mutex{}
+	wp.workerWg = &sync.WaitGroup{}
+	wp.inProgressMu = &sync.Mutex{}
+	wp.waitingMu = &sync.Mutex{}
+	wp.jobCh = make(chan job, wp.bandwidth)
+	wp.errCh = make(chan error, wp.bandwidth)
+	wp.resultCh = make(chan interface{}, wp.bandwidth)
+}
+
 // Stop performs a graceful shutdown of all workers
 func (wp *WorkerPool) Stop() {
 	wp.cancel()
 	wp.workerWg.Wait()
+	close(wp.jobCh)
+	close(wp.errCh)
+	close(wp.resultCh)
+}
+
+func (wp *WorkerPool) FlushAndRestart() {
+	wp.Stop()
+	wp.refreshControls()
+	wp.Start(wp.parentCtx)
 }
 
 // SetInputFeed configures the workerpool to receive jobs from an input channel, with a "transformer" method

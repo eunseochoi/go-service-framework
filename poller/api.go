@@ -14,6 +14,10 @@ func (p *Poller) Pause() {
 	p.modeMu.Lock()
 	defer p.modeMu.Unlock()
 
+	p.writePool.FlushAndRestart()
+	p.accumulatePool.FlushAndRestart()
+	p.fetchPool.FlushAndRestart()
+
 	p.mode = ModePaused
 }
 

@@ -42,10 +42,16 @@ type Poller struct {
 
 // New constructs a new poller, given a config, a chain-specific driver, and a variadic array of options
 func New(cfg *Config, driver Driver, opts ...opt) *Poller {
+	startMode := ModePaused
+	if cfg.AutoStart {
+		startMode = ModeReady
+	}
+
 	p := Poller{
 		cfg:    cfg,
 		driver: driver,
 		modeMu: &sync.Mutex{},
+		mode:   startMode,
 	}
 	for _, opt := range opts {
 		opt(&p)

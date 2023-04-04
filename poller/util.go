@@ -12,6 +12,8 @@ func (p *Poller) cacheKey() string {
 func modeToString(mode int) string {
 	out := "unknown"
 	switch mode {
+	case ModePaused:
+		out = "paused"
 	case ModeSleep:
 		out = "sleep"
 	case ModeReady:

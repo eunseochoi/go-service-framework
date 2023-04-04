@@ -12,4 +12,5 @@ type Config struct {
 	HttpRetries int                  `env:"http_retries" envDefault:"10"`
 	SleepTime   time.Duration        `env:"poller_sleep_time" envDefault:"12s"`
 	Tick        time.Duration        `env:"poller_tick_duration" envDefault:"1s"`
+	AutoStart   bool                 `env:"poller_auto_start" envDefault:"false"`
 }
