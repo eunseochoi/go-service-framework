@@ -15,7 +15,7 @@ const (
 )
 
 type Config struct {
-	AppName     string      `env:"app,required"`
+	AppName     string      `env:"app"`
 	Env         Environment `env:"env" envDefault:"local"`
 	DatadogIP   string      `env:"datadog_ip"`
 	DatadogPort string      `env:"datadog_port"`

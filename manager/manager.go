@@ -31,6 +31,8 @@ type grpcSrv struct {
 type backgroundSvcStarter func(ctx context.Context) error
 type backgroundSvcStopper func()
 type Manager struct {
+	app                 string
+	env                 Environment
 	useGracefulShutdown bool
 	svcContext          context.Context
 	svcContextCancel    context.CancelFunc
@@ -52,6 +54,8 @@ func New(opts ...opt) *Manager {
 	logger := mustInitLogger(cfg)
 
 	m := Manager{
+		app:                 cfg.AppName,
+		env:                 cfg.Env,
 		useGracefulShutdown: true,
 		svcContext:          ctx,
 		svcContextCancel:    cancel,
@@ -101,6 +105,14 @@ func (m *Manager) Metrics() util.Metrics {
 
 func (m *Manager) Logger() util.Logger {
 	return m.logger
+}
+
+func (m *Manager) Env() Environment {
+	return m.env
+}
+
+func (m *Manager) App() string {
+	return m.app
 }
 
 func (m *Manager) ForceKill() {
