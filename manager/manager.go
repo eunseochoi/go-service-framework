@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"github.com/datadaodevs/go-service-framework/util"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
@@ -133,49 +132,49 @@ func (m *Manager) WaitForInterrupt() {
 	signal.Notify(notifyChannel, os.Interrupt)
 	signal.Notify(notifyChannel, os.Kill)
 
-	log.Info("Waiting for interrupt")
+	m.logger.Info("Waiting for interrupt")
 	select {
 	case <-aliveCtx.Done():
-		log.Warn("Manual force kill signal received")
+		m.logger.Warn("Manual force kill signal received")
 	case sig := <-notifyChannel:
-		log.Warnf("OS signal received: %s", sig.String())
+		m.logger.Warnf("OS signal received: %s", sig.String())
 	}
 
 	if !m.useGracefulShutdown {
-		log.Warn("Graceful shutdown disabled; force-killing all services")
+		m.logger.Warn("Graceful shutdown disabled; force-killing all services")
 		m.svcContextCancel()
-		log.Info("Manager exiting")
+		m.logger.Info("Manager exiting")
 		return
 	}
 
 	timer := time.NewTimer(20 * time.Second)
 	select {
 	case <-m.attemptGracefulShutdown():
-		log.Info("Graceful shutdown succeeded")
+		m.logger.Info("Graceful shutdown succeeded")
 	case <-timer.C:
-		log.Info("Graceful shutdown deadline exceeded; force-killing all services")
+		m.logger.Info("Graceful shutdown deadline exceeded; force-killing all services")
 		m.svcContextCancel()
 	}
-	log.Info("Manager exiting")
+	m.logger.Info("Manager exiting")
 }
 
 func (m *Manager) attemptGracefulShutdown() chan struct{} {
 	ch := make(chan struct{})
 	go func() {
 		for name, server := range m.httpSrvs {
-			log.WithField("name", name).Info("Attempting graceful shutdown of HTTP server")
+			m.logger.Infof("[%s]: Attempting graceful shutdown of HTTP server", name)
 			server.cancel()
 		}
 	}()
 	go func() {
 		for name, server := range m.grpcSrvs {
-			log.WithField("name", name).Info("Attempting graceful shutdown of GRPC server")
+			m.logger.Infof("[%s]: Attempting graceful shutdown of GRPC server", name)
 			server.cancel()
 		}
 	}()
 	go func() {
 		for name, svc := range m.backgroundSvc {
-			log.WithField("name", name).Info("Attempting graceful shutdown of background service")
+			m.logger.Infof("[%s]: Attempting graceful shutdown of background service", name)
 			svc.cancel()
 		}
 	}()
@@ -197,20 +196,20 @@ func (m *Manager) startGRPCServers() {
 			defer m.wg.Done()
 			grpcListener, err := net.Listen("tcp", server.port)
 			if err != nil {
-				log.WithError(err).Fatal("Failed to start grpc server")
+				m.logger.Fatalf("Failed to start grpc server: %v", err)
 			}
 			defer grpcListener.Close()
 
-			log.WithField("name", name).Info("Starting GRPC server")
+			m.logger.Infof("[%s]: Starting GRPC server", name)
 			if err := server.server.Serve(grpcListener); err != nil {
-				log.WithField("name", name).WithError(err).Info("GRPC server stopped")
+				m.logger.Infof("[%s]: GRPC server stopped", name)
 			}
 		}(aliveCtx, server)
 		m.wg.Add(1)
 		go func(server *grpc.Server, name string) {
 			defer m.wg.Done()
 			<-aliveCtx.Done()
-			log.WithField("name", name).Info("Shutting down grpc server")
+			m.logger.Infof("[%s]: Shutting down grpc server", name)
 			server.GracefulStop()
 		}(server.server, name)
 	}
@@ -225,16 +224,16 @@ func (m *Manager) startHTTPServers() {
 		m.wg.Add(1)
 		go func(server *http.Server, name string) {
 			defer m.wg.Done()
-			log.WithField("name", name).Info("Starting HTTP server")
+			m.logger.Infof("[%s]: Starting HTTP server", name)
 			if err := server.ListenAndServe(); err != nil {
-				log.WithError(err).Info("HTTP exited")
+				m.logger.Errorf("HTTP exited: %v", err)
 			}
 		}(server.server, name)
 		m.wg.Add(1)
 		go func(aliveCtx context.Context, server *http.Server) {
 			defer m.wg.Done()
 			<-aliveCtx.Done()
-			log.WithField("name", name).Info("Shutting down HTTP server")
+			m.logger.Infof("[%s]: Shutting down HTTP server", name)
 			server.Shutdown(m.svcContext)
 		}(aliveCtx, server.server)
 	}
@@ -252,16 +251,16 @@ func (m *Manager) startBackgroundServices() {
 			defer m.wg.Done()
 			//	Create operating context to be passed to service
 			opCtx, _ := context.WithCancel(m.svcContext)
-			log.WithField("name", name).Info("Starting background service")
+			m.logger.Infof("[%s]: Starting background service", name)
 			if err := svc.starter(opCtx); err != nil {
-				log.WithField("name", name).WithError(err).Warn("Failed to start background service")
+				m.logger.Errorf("[%s]: Failed to start background service", name)
 				return
 			}
-			log.WithField("name", name).Info("Background service now running")
+			m.logger.Infof("[%s]: Background service is now running", name)
 			<-aliveCtx.Done()
-			log.WithField("name", name).Info("Service context cancelled; beginning graceful shutdown")
+			m.logger.Infof("[%s]: Service context cancelled; beginning graceful shutdown", name)
 			svc.stopper()
-			log.WithField("name", name).Info("Graceful shutdown complete")
+			m.logger.Infof("[%s]: Graceful shutdown complete", name)
 		}(aliveCtx, svc, name)
 	}
 }

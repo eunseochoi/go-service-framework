@@ -15,10 +15,10 @@ const (
 )
 
 type Config struct {
-	AppName     string      `env:"app"`
-	Env         Environment `env:"env" envDefault:"local"`
-	DatadogIP   string      `env:"datadog_ip"`
-	DatadogPort string      `env:"datadog_port"`
+	AppName     string      `env:"APP"`
+	Env         Environment `env:"ENV" envDefault:"local"`
+	DatadogIP   string      `env:"DATADOG_IP"`
+	DatadogPort string      `env:"DATADOG_PORT"`
 }
 
 func mustParseConfig() *Config {
