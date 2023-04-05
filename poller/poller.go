@@ -107,7 +107,7 @@ func (p *Poller) Start(ctx context.Context) error {
 				wg := sync.WaitGroup{}
 				startIndex := cursor
 				for i := 0; i < p.cfg.BatchSize; i++ {
-					wg.Add(1)
+					wg.Add(p.driverTaskLoad())
 					p.fetchPool.PushGroup(p.driver.FetchSequence(startIndex+uint64(i)), &wg)
 				}
 				wg.Wait()
@@ -122,7 +122,7 @@ func (p *Poller) Start(ctx context.Context) error {
 					continue
 				}
 				wg := sync.WaitGroup{}
-				wg.Add(1)
+				wg.Add(p.driverTaskLoad())
 				p.fetchPool.PushGroup(p.driver.FetchSequence(cursor), &wg)
 				wg.Wait()
 				cursor++

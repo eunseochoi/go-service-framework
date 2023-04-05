@@ -29,8 +29,8 @@ type WorkerPool struct {
 	errHandler       ErrHandler
 	errCh            chan error
 	jobCh            chan job
-	resultCh         chan interface{}
-	feedCh           <-chan interface{}
+	resultCh         chan result
+	feedCh           <-chan result
 	cancel           context.CancelFunc
 	throttler        *Throttler
 	useOutputCh      bool
@@ -79,7 +79,7 @@ func (wp *WorkerPool) refreshControls() {
 	wp.waitingMu = &sync.Mutex{}
 	wp.jobCh = make(chan job, wp.bandwidth)
 	wp.errCh = make(chan error, wp.bandwidth)
-	wp.resultCh = make(chan interface{}, wp.bandwidth)
+	wp.resultCh = make(chan result, wp.bandwidth)
 }
 
 // Stop performs a graceful shutdown of all workers
@@ -99,39 +99,38 @@ func (wp *WorkerPool) FlushAndRestart() {
 
 // SetInputFeed configures the workerpool to receive jobs from an input channel, with a "transformer" method
 // that converts a generic input interface into a Runner
-func (wp *WorkerPool) SetInputFeed(feed <-chan interface{}, transformers ...FeedTransformer) {
+func (wp *WorkerPool) SetInputFeed(feed <-chan result, transformers ...FeedTransformer) {
 	wp.feedCh = feed
 	wp.feedTransformers = transformers
 }
 
-// PushGroup queues a group of Runners for execution, with a receipt signal to be sent to the supplied wg when
+// PushGroup queues a group of Runners for execution, with a receipt signal to be sent to the supplied receiptWg when
 // all Runners are completed
 func (wp *WorkerPool) PushGroup(fns map[string]Runner, wg *sync.WaitGroup) {
 	groupID := ksuid.New().String()
 	wp.groupMu.Lock()
 	defer wp.groupMu.Unlock()
 	wp.groups[groupID] = &group{
-		results:   ResultSet{},
-		receiptWg: wg,
-		cursor:    0,
-		jobCount:  len(fns),
+		results:  ResultSet{},
+		cursor:   0,
+		jobCount: len(fns),
 	}
 	go func() {
 		for jobID, fn := range fns {
-			wp.jobCh <- job{fn: fn, groupID: groupID, id: jobID}
+			wp.jobCh <- job{fn: fn, groupID: groupID, id: jobID, receiptWg: wg}
 		}
 	}()
 }
 
 // PushJob queues a one-off job for execution
-func (wp *WorkerPool) PushJob(fn Runner) {
+func (wp *WorkerPool) PushJob(fn Runner, wg *sync.WaitGroup) {
 	id := ksuid.New().String()
-	wp.jobCh <- job{fn: fn, id: id}
+	wp.jobCh <- job{fn: fn, id: id, receiptWg: wg}
 }
 
 // Results gives public access to a channel that will receive results as they are processed; requires that the
 // WithOutputChannel() option be passed to the constructor for proper functionality
-func (wp *WorkerPool) Results() <-chan interface{} {
+func (wp *WorkerPool) Results() <-chan result {
 	return wp.resultCh
 }
 
@@ -151,7 +150,7 @@ func (wp *WorkerPool) startFeeder(ctx context.Context) {
 				return
 			case res := <-wp.feedCh:
 				for _, transformer := range wp.feedTransformers {
-					wp.jobCh <- job{fn: transformer(res)}
+					wp.jobCh <- job{fn: transformer(res.payload), receiptWg: res.wg, id: ksuid.New().String()}
 				}
 			}
 		}
@@ -178,19 +177,21 @@ func (wp *WorkerPool) startJobWorkers(ctx context.Context) {
 					switch {
 					case job.groupID != "":
 						res, err := job.fn(ctx)
-						wp.processGroupResult(job.groupID, job.id, res, err)
+						wp.processGroupResult(&job, res, err)
 					default:
 						res, err := job.fn(ctx)
 						if err != nil {
 							wp.errCh <- err
+							job.receiptWg.Done()
 							break
 						}
 						if wp.useOutputCh {
-							wp.resultCh <- res
+							wp.resultCh <- result{payload: res, wg: job.receiptWg}
 						}
+						job.receiptWg.Done()
 					}
+					wp.decrInProgress()
 				}
-				wp.decrInProgress()
 			}
 		}(ctx)
 	}
@@ -215,37 +216,35 @@ func (wp *WorkerPool) startErrorWorkers(ctx context.Context) {
 }
 
 // processGroupResult processes the result (or error) for a job, given the job is part of a group
-func (wp *WorkerPool) processGroupResult(groupID string, jobID string, res interface{}, err error) {
+func (wp *WorkerPool) processGroupResult(job *job, res interface{}, err error) {
 	//	lock group mutex
 	wp.groupMu.Lock()
 	defer wp.groupMu.Unlock()
+	defer job.receiptWg.Done()
 
 	//	pull group from memory
-	group := wp.groups[groupID]
+	group := wp.groups[job.groupID]
 
 	//	increment cursor
 	group.cursor++
 
 	//	accumulate result
-	group.results[jobID] = res
+	group.results[job.id] = res
 
 	//	if we're complete with the group, send wg receipt and push result to results ch, if applicable
 	if group.cursor == group.jobCount {
-		//	receiptWg
-		group.receiptWg.Done()
-
 		//	if this is an error, push the error and exit
 		if err != nil {
 			wp.errCh <- err
-			delete(wp.groups, groupID)
+			delete(wp.groups, job.groupID)
 			return
 		}
 
 		if wp.useOutputCh {
-			wp.resultCh <- ResultSet(group.results)
+			wp.resultCh <- result{payload: ResultSet(group.results), wg: job.receiptWg}
 		}
 
-		delete(wp.groups, groupID)
+		delete(wp.groups, job.groupID)
 	}
 }
 

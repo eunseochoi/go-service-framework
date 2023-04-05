@@ -9,6 +9,11 @@ func (p *Poller) cacheKey() string {
 	return fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
 }
 
+func (p *Poller) driverTaskLoad() int {
+	//	count of fetchers + count of accumulators (always 1) + count of writers == number of queued jobs per block
+	return len(p.driver.FetchSequence(0)) + 1 + len(p.driver.Writers())
+}
+
 func modeToString(mode int) string {
 	out := "unknown"
 	switch mode {
