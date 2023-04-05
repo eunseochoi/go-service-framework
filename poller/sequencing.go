@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/datadaodevs/go-service-framework/retry"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -36,7 +35,7 @@ func (p *Poller) setModeAndGetCursor(ctx context.Context) (uint64, error) {
 	//	Cursor is within reorg
 	case cursor >= maxBlock:
 		p.setSleepMode()
-		log.Warn("Cursor is within reorg range; poller going to sleep")
+		p.logger.Warn("Cursor is within reorg range; poller going to sleep")
 	// Cursor is close enough that we should be in Chaintip mode
 	case distanceToMaxBlock < uint64(p.cfg.BatchSize):
 		p.mode = ModeChaintip
