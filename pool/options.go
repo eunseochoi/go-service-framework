@@ -1,6 +1,6 @@
 package pool
 
-import "github.com/datadaodevs/go-service-framework/util"
+import "github.com/coherentopensource/go-service-framework/util"
 
 type opt func(wp *WorkerPool)
 

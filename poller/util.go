@@ -2,7 +2,7 @@ package poller
 
 import (
 	"fmt"
-	"github.com/datadaodevs/go-service-framework/constants"
+	"github.com/coherentopensource/go-service-framework/constants"
 )
 
 func (p *Poller) cacheKey() string {

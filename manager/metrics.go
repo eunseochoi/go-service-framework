@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"github.com/datadaodevs/go-service-framework/metrics"
-	"github.com/datadaodevs/go-service-framework/util"
+	"github.com/coherentopensource/go-service-framework/metrics"
+	"github.com/coherentopensource/go-service-framework/util"
 	"log"
 )
 

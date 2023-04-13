@@ -2,7 +2,7 @@ package manager
 
 import (
 	"context"
-	"github.com/datadaodevs/go-service-framework/util"
+	"github.com/coherentopensource/go-service-framework/util"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"

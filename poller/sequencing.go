@@ -2,7 +2,7 @@ package poller
 
 import (
 	"context"
-	"github.com/datadaodevs/go-service-framework/retry"
+	"github.com/coherentopensource/go-service-framework/retry"
 	"github.com/pkg/errors"
 	"time"
 )

@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"github.com/datadaodevs/go-service-framework/util"
+	"github.com/coherentopensource/go-service-framework/util"
 	"github.com/go-redis/redis/v8"
 )
 

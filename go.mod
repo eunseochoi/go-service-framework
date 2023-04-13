@@ -1,4 +1,4 @@
-module github.com/datadaodevs/go-service-framework
+module github.com/coherentopensource/go-service-framework
 
 go 1.20
 

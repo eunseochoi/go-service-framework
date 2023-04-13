@@ -2,7 +2,7 @@ package poller
 
 import (
 	"context"
-	"github.com/datadaodevs/go-service-framework/pool"
+	"github.com/coherentopensource/go-service-framework/pool"
 )
 
 type Driver interface {

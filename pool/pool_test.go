@@ -2,7 +2,7 @@ package pool_test
 
 import (
 	"context"
-	"github.com/datadaodevs/go-service-framework/pool"
+	"github.com/coherentopensource/go-service-framework/pool"
 	"go.uber.org/zap"
 	"sync"
 	"testing"
