@@ -70,7 +70,7 @@ func (p *Poller) Start(ctx context.Context) error {
 	p.runCtx = ctx
 	p.cancelFunc = cancel
 
-	p.logger.Infof("Main poller worker starting for blockchain [%s]", p.driver.Blockchain())
+	p.logger.Infof("Contract poller worker starting for blockchain [%s]", p.driver.Blockchain())
 	go func() {
 		for {
 			//	Check for context cancellation
@@ -103,12 +103,12 @@ func (p *Poller) Start(ctx context.Context) error {
 				continue
 			case ModeBackfill:
 				//	If in ""backfill" mode, consume a batch of blocks and update the cursor
-				p.logger.Infof("Batch mode: start polling at block %d with batch size %d", cursor, p.cfg.BatchSize)
+				p.logger.Infof("Batch mode: start polling contracts at block %d with batch size %d", cursor, p.cfg.BatchSize)
 				wg := sync.WaitGroup{}
 				startIndex := cursor
 				for i := 0; i < p.cfg.BatchSize; i++ {
 					wg.Add(p.driverTaskLoad())
-					p.fetchPool.PushGroup(p.driver.FetchSequence(startIndex+uint64(i)), &wg)
+					p.fetchPool.PushGroup(p.driver.FetchSequenceForContract(cursor), &wg)
 				}
 				wg.Wait()
 				cursor = startIndex + uint64(p.cfg.BatchSize)
@@ -117,7 +117,7 @@ func (p *Poller) Start(ctx context.Context) error {
 				p.logger.Infof("Chaintip mode: pulling block %d", cursor)
 				wg := sync.WaitGroup{}
 				wg.Add(p.driverTaskLoad())
-				p.fetchPool.PushGroup(p.driver.FetchSequence(cursor), &wg)
+				p.fetchPool.PushGroup(p.driver.FetchSequenceForContract(cursor), &wg)
 				wg.Wait()
 				cursor++
 			}

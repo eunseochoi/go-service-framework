@@ -8,8 +8,8 @@ import (
 type Driver interface {
 	Blockchain() string
 	GetChainTipNumber(ctx context.Context) (uint64, error)
-	// FetchSequence involves fetching trace from node, abi from contract source, and metadata from node
-	FetchSequence(index uint64) map[string]pool.Runner
+	// FetchSequenceForContract involves fetching trace from node, abi from contract source, and metadata from node in a sequential manner
+	FetchSequenceForContract(index uint64) map[string]pool.Runner
 	// Accumulate involves combining abi, metadata to form a complete contract, building fragments
 	Accumulate(res interface{}) pool.Runner
 	// Writers involves writing to postgresDB
