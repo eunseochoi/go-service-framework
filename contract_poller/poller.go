@@ -115,12 +115,6 @@ func (p *Poller) Start(ctx context.Context) error {
 			case ModeChaintip:
 				//	If in "chaintip" mode, pull the latest block, validate it, then consume it
 				p.logger.Infof("Chaintip mode: pulling block %d", cursor)
-				if p.driver.IsValidBlock(ctx, cursor); err != nil {
-					p.logger.Errorf("Invalid block (possible reorg detected) - %v", err)
-					//	Sleep for N seconds if invalid block is detected
-					p.setSleepMode()
-					continue
-				}
 				wg := sync.WaitGroup{}
 				wg.Add(p.driverTaskLoad())
 				p.fetchPool.PushGroup(p.driver.FetchSequence(cursor), &wg)
