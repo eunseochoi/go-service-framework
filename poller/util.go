@@ -1,12 +1,7 @@
 package poller
 
-import (
-	"fmt"
-	"github.com/coherentopensource/go-service-framework/constants"
-)
-
 func (p *Poller) cacheKey() string {
-	return fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
+	return p.cursorKey
 }
 
 func (p *Poller) driverTaskLoad() int {

@@ -2,10 +2,14 @@ package poller
 
 import (
 	"context"
-	"github.com/coherentopensource/go-service-framework/pool"
-	"github.com/coherentopensource/go-service-framework/util"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/coherentopensource/go-service-framework/constants"
+	"github.com/coherentopensource/go-service-framework/pool"
+	"github.com/coherentopensource/go-service-framework/util"
 )
 
 // Modes determine what the poller does on each iteration of its main routine's loop; these are determined by
@@ -38,6 +42,7 @@ type Poller struct {
 	writePool      *pool.WorkerPool
 	cancelFunc     context.CancelFunc
 	runCtx         context.Context
+	cursorKey      string
 }
 
 // New constructs a new poller, given a config, a chain-specific driver, and a variadic array of options
@@ -59,6 +64,11 @@ func New(cfg *Config, driver Driver, opts ...opt) *Poller {
 
 	p.accumulatePool.SetInputFeed(p.fetchPool.Results(), p.driver.Accumulate)
 	p.writePool.SetInputFeed(p.accumulatePool.Results(), p.driver.Writers()...)
+
+	p.cursorKey = strings.TrimSpace(cfg.CursorKey)
+	if p.cursorKey == "" {
+		p.cursorKey = fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
+	}
 
 	return &p
 }

@@ -1,8 +1,9 @@
 package poller
 
 import (
-	"github.com/coherentopensource/go-service-framework/constants"
 	"time"
+
+	"github.com/coherentopensource/go-service-framework/constants"
 )
 
 type Config struct {
@@ -13,4 +14,5 @@ type Config struct {
 	SleepTime   time.Duration        `env:"POLLER_SLEEP_TIME" envDefault:"12s"`
 	Tick        time.Duration        `env:"POLLER_TICK_DURATION" envDefault:"1s"`
 	AutoStart   bool                 `env:"POLLER_AUTO_START" envDefault:"false"`
+	CursorKey   string               `env:"CURSOR_KEY" envDefault:""`
 }
