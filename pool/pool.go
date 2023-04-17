@@ -24,7 +24,8 @@ type WorkerPool struct {
 	groups           map[string]*group
 	groupMu          *sync.Mutex
 	workerWg         *sync.WaitGroup
-	feedTransformers []FeedTransformer
+	feedTransformers map[string]FeedTransformer
+	useGroupForFeed  bool
 	bandwidth        int
 	errHandler       ErrHandler
 	errCh            chan error
@@ -42,6 +43,8 @@ func NewWorkerPool(id string, opts ...opt) *WorkerPool {
 	wp := WorkerPool{
 		id:        id,
 		bandwidth: defaultBandwidth,
+		// this is default anyway, but specifying for explicitness
+		useGroupForFeed: false,
 	}
 	wp.errHandler = wp.defaultErrHandler
 	for _, opt := range opts {
@@ -97,11 +100,32 @@ func (wp *WorkerPool) FlushAndRestart() {
 	wp.Start(wp.parentCtx)
 }
 
-// SetInputFeed configures the workerpool to receive jobs from an input channel, with a "transformer" method
-// that converts a generic input interface into a Runner
+// SetInputFeed configures the workerpool to receive jobs from an input channel, with "transformer" methods
+// that convert a generic input interface into a Runner
 func (wp *WorkerPool) SetInputFeed(feed <-chan result, transformers ...FeedTransformer) {
+	if wp.feedCh != nil {
+		wp.logger.Warn("Attempting to set input feed, when input feed is already defined")
+		return
+	}
+
 	wp.feedCh = feed
-	wp.feedTransformers = transformers
+	wp.feedTransformers = map[string]FeedTransformer{}
+	for _, transformer := range transformers {
+		wp.feedTransformers[ksuid.New().String()] = transformer
+	}
+}
+
+// SetGroupInputFeed configures the workerpool to receive jobs from an input channel, with "transformer" methods
+// that convert a generic input interface into a Runner; with the runners executed as a group
+func (wp *WorkerPool) SetGroupInputFeed(feed <-chan result, groupMap map[string]FeedTransformer) {
+	if wp.feedCh != nil {
+		wp.logger.Warn("Attempting to set group input feed, when input feed is already defined")
+		return
+	}
+
+	wp.feedCh = feed
+	wp.feedTransformers = groupMap
+	wp.useGroupForFeed = true
 }
 
 // PushGroup queues a group of Runners for execution, with a receipt signal to be sent to the supplied receiptWg when
@@ -149,8 +173,17 @@ func (wp *WorkerPool) startFeeder(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case res := <-wp.feedCh:
-				for _, transformer := range wp.feedTransformers {
-					wp.jobCh <- job{fn: transformer(res.payload), receiptWg: res.wg, id: ksuid.New().String()}
+				group := map[string]Runner{}
+				for id, transformer := range wp.feedTransformers {
+					switch {
+					case wp.useGroupForFeed:
+						group[id] = transformer(res.payload)
+					default:
+						wp.jobCh <- job{fn: transformer(res.payload), receiptWg: res.wg, id: ksuid.New().String()}
+					}
+				}
+				if wp.useGroupForFeed {
+					wp.PushGroup(group, res.wg)
 				}
 			}
 		}
