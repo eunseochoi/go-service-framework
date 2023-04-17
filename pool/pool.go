@@ -103,6 +103,11 @@ func (wp *WorkerPool) FlushAndRestart() {
 // SetInputFeed configures the workerpool to receive jobs from an input channel, with "transformer" methods
 // that convert a generic input interface into a Runner
 func (wp *WorkerPool) SetInputFeed(feed <-chan result, transformers ...FeedTransformer) {
+	if wp.feedCh != nil {
+		wp.logger.Warn("Attempting to set input feed, when input feed is already defined")
+		return
+	}
+
 	wp.feedCh = feed
 	wp.feedTransformers = map[string]FeedTransformer{}
 	for _, transformer := range transformers {
@@ -113,6 +118,11 @@ func (wp *WorkerPool) SetInputFeed(feed <-chan result, transformers ...FeedTrans
 // SetGroupInputFeed configures the workerpool to receive jobs from an input channel, with "transformer" methods
 // that convert a generic input interface into a Runner; with the runners executed as a group
 func (wp *WorkerPool) SetGroupInputFeed(feed <-chan result, groupMap map[string]FeedTransformer) {
+	if wp.feedCh != nil {
+		wp.logger.Warn("Attempting to set group input feed, when input feed is already defined")
+		return
+	}
+
 	wp.feedCh = feed
 	wp.feedTransformers = groupMap
 	wp.useGroupForFeed = true
