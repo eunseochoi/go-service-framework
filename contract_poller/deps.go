@@ -9,7 +9,9 @@ type Driver interface {
 	Blockchain() string
 	GetChainTipNumber(ctx context.Context) (uint64, error)
 	// FetchContractAddresses involves fetching trace from ethrpc node
-	FetchContractAddresses(index uint64) map[string]pool.Runner
+	FetchContractAddresses(blockNumber uint64) map[string]pool.Runner
+	// FetchContractMetadata involves fetching contract's abi and metadata, using results from FetchContractAddresses
+	FetchContractMetadata() map[string]pool.FeedTransformer
 	// Accumulate involves combining abi, metadata to form a complete contract, building fragments
 	Accumulate(res interface{}) pool.Runner
 	// Writers involves writing to postgresDB

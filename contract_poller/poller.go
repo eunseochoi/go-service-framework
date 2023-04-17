@@ -34,6 +34,7 @@ type Poller struct {
 	driver         Driver
 	cache          Cache
 	fetchPool      *pool.WorkerPool
+	getAddressPool *pool.WorkerPool
 	accumulatePool *pool.WorkerPool
 	writePool      *pool.WorkerPool
 	cancelFunc     context.CancelFunc
@@ -56,7 +57,7 @@ func New(cfg *Config, driver Driver, opts ...opt) *Poller {
 	for _, opt := range opts {
 		opt(&p)
 	}
-
+	p.fetchPool.SetGroupInputFeed(p.getAddressPool.Results(), p.driver.FetchContractMetadata())
 	p.accumulatePool.SetInputFeed(p.fetchPool.Results(), p.driver.Accumulate)
 	p.writePool.SetInputFeed(p.accumulatePool.Results(), p.driver.Writers()...)
 
@@ -129,7 +130,7 @@ func (p *Poller) Start(ctx context.Context) error {
 			}
 
 			//	Log/stat update
-			p.logger.Infof("finished polling at block %d with batch size %d", cursor, p.cfg.BatchSize)
+			p.logger.Infof("finished polling contracts at block %d with batch size %d", cursor, p.cfg.BatchSize)
 			p.metrics.Gauge("keep_up_with_chain_tip", float64(time.Since(start).Milliseconds()), []string{}, 1.0)
 		}
 	}()
