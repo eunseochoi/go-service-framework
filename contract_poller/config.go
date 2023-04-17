@@ -1,7 +1,7 @@
 package contract_poller
 
 import (
-	"github.com/datadaodevs/go-service-framework/constants"
+	"github.com/coherentopensource/go-service-framework/constants"
 	"time"
 )
 
