@@ -11,7 +11,7 @@ func (p *Poller) cacheKey() string {
 
 func (p *Poller) driverTaskLoad() int {
 	//	count of fetchers + count of accumulators (always 1) + count of writers == number of queued jobs per block
-	return len(p.driver.FetchSequenceForContract(0)) + 1 + len(p.driver.Writers())
+	return len(p.driver.FetchContractAddresses(0)) + 1 + len(p.driver.Writers())
 }
 
 func modeToString(mode int) string {
