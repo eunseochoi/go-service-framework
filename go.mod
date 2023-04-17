@@ -6,7 +6,6 @@ require (
 	github.com/DataDog/datadog-go/v5 v5.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/segmentio/ksuid v1.0.4
-	github.com/sirupsen/logrus v1.7.0
 	google.golang.org/grpc v1.54.0
 )
 
