@@ -169,7 +169,7 @@ func (wp *WorkerPool) startFeeder(ctx context.Context) {
 					case wp.useGroupForFeed:
 						group[id] = transformer(res.payload)
 					default:
-						wp.jobCh <- job{fn: transformer(res.payload), receiptWg: res.wg, id: id}
+						wp.jobCh <- job{fn: transformer(res.payload), receiptWg: res.wg, id: ksuid.New().String()}
 					}
 				}
 				if wp.useGroupForFeed {
