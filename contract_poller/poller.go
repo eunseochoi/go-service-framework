@@ -109,7 +109,7 @@ func (p *Poller) Start(ctx context.Context) error {
 				startIndex := cursor
 				for i := 0; i < p.cfg.BatchSize; i++ {
 					wg.Add(p.driverTaskLoad())
-					p.getAddressPool.PushJob(p.driver.FetchContractAddresses(cursor), &wg)
+					p.getAddressPool.PushGroup(p.driver.FetchSequence(cursor), &wg)
 				}
 				wg.Wait()
 				cursor = startIndex + uint64(p.cfg.BatchSize)
@@ -118,7 +118,7 @@ func (p *Poller) Start(ctx context.Context) error {
 				p.logger.Infof("Chaintip mode: pulling block %d", cursor)
 				wg := sync.WaitGroup{}
 				wg.Add(p.driverTaskLoad())
-				p.getAddressPool.PushJob(p.driver.FetchContractAddresses(cursor), &wg)
+				p.getAddressPool.PushGroup(p.driver.FetchSequence(cursor), &wg)
 				wg.Wait()
 				cursor++
 			}
