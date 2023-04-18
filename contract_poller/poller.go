@@ -57,7 +57,7 @@ func New(cfg *Config, driver Driver, opts ...opt) *Poller {
 	for _, opt := range opts {
 		opt(&p)
 	}
-	p.fetchPool.SetGroupInputFeed(p.getAddressPool.Results(), p.driver.FetchContractMetadata())
+	p.fetchPool.SetGroupInputFeed(p.getAddressPool.Results(), p.driver.Fetchers())
 	p.accumulatePool.SetInputFeed(p.fetchPool.Results(), p.driver.Accumulate)
 	p.writePool.SetInputFeed(p.accumulatePool.Results(), p.driver.Writers()...)
 
@@ -109,7 +109,7 @@ func (p *Poller) Start(ctx context.Context) error {
 				startIndex := cursor
 				for i := 0; i < p.cfg.BatchSize; i++ {
 					wg.Add(p.driverTaskLoad())
-					p.fetchPool.PushGroup(p.driver.FetchContractAddresses(cursor), &wg)
+					p.getAddressPool.PushJob(p.driver.FetchContractAddresses(cursor), &wg)
 				}
 				wg.Wait()
 				cursor = startIndex + uint64(p.cfg.BatchSize)
@@ -118,7 +118,7 @@ func (p *Poller) Start(ctx context.Context) error {
 				p.logger.Infof("Chaintip mode: pulling block %d", cursor)
 				wg := sync.WaitGroup{}
 				wg.Add(p.driverTaskLoad())
-				p.fetchPool.PushGroup(p.driver.FetchContractAddresses(cursor), &wg)
+				p.getAddressPool.PushJob(p.driver.FetchContractAddresses(cursor), &wg)
 				wg.Wait()
 				cursor++
 			}

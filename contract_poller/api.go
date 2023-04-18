@@ -4,9 +4,10 @@ import "context"
 
 func (p *Poller) Insights() map[string]map[string]int {
 	return map[string]map[string]int{
-		"fetch-pool":      p.fetchPool.Insights(),
-		"accumulate-pool": p.accumulatePool.Insights(),
-		"write-pool":      p.writePool.Insights(),
+		"fetch-address-pool": p.getAddressPool.Insights(),
+		"fetch-pool":         p.fetchPool.Insights(),
+		"accumulate-pool":    p.accumulatePool.Insights(),
+		"write-pool":         p.writePool.Insights(),
 	}
 }
 
@@ -17,7 +18,7 @@ func (p *Poller) Pause() {
 	p.writePool.FlushAndRestart()
 	p.accumulatePool.FlushAndRestart()
 	p.fetchPool.FlushAndRestart()
-
+	p.getAddressPool.FlushAndRestart()
 	p.mode = ModePaused
 }
 
