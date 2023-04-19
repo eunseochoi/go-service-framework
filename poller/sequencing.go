@@ -2,9 +2,10 @@ package poller
 
 import (
 	"context"
+	"time"
+
 	"github.com/coherentopensource/go-service-framework/retry"
 	"github.com/pkg/errors"
-	"time"
 )
 
 // setModeAndGetCursor uses the delta between local and remote chaintip values to deduce whether poller

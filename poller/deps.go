@@ -2,6 +2,7 @@ package poller
 
 import (
 	"context"
+
 	"github.com/coherentopensource/go-service-framework/pool"
 )
 
