@@ -1,11 +1,13 @@
 package database
 
-import "strings"
+import (
+	"fmt"
+)
 
 type Config struct {
 	DBHost           string `env:"DB_HOST,required"`
 	DBPassword       string `env:"DB_PASSWORD,required"`
-	DBUser           string `emv:"DB_USER,required"`
+	DBUser           string `env:"DB_USER,required"`
 	DBName           string `env:"DB_NAME,required"`
 	DBPort           string `env:"DB_PORT,required"`
 	SSLMode          string `env:"SSL_MODE,required"`
@@ -14,12 +16,14 @@ type Config struct {
 }
 
 func (c *Config) DSN() string {
-	return strings.Join([]string{
-		"host=", c.DBHost,
-		" user=", c.DBUser,
-		" password=", c.DBPassword,
-		" dbname=", c.DBName,
-		" port=", c.DBPort,
-		" sslmode=", c.SSLMode,
-	}, "")
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+		c.DBHost,
+		c.DBUser,
+		c.DBPassword,
+		c.DBName,
+		c.DBPort,
+		c.SSLMode,
+	)
+	return dsn
 }
