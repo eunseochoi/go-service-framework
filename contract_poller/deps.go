@@ -11,7 +11,7 @@ type Driver interface {
 	// FetchSequence involves fetching trace and receipt from ethrpc node
 	FetchSequence(blockNumber uint64) map[string]pool.Runner
 	// Fetchers involves fetching contract's abi and metadata, using results from FetchContractAddresses
-	Fetchers(res interface{}) map[string]pool.FeedTransformer
+	Fetchers() map[string]pool.FeedTransformer
 	// Accumulate involves combining abi, metadata to form a complete contract, building fragments
 	Accumulate(res interface{}) pool.Runner
 	// Writers involves writing to postgresDB

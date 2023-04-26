@@ -12,6 +12,13 @@ func WithFetchPool(wp *pool.WorkerPool) opt {
 		p.fetchPool = wp
 	}
 }
+
+func WithAddressFetchPool(wp *pool.WorkerPool) opt {
+	return func(p *Poller) {
+		p.getAddressPool = wp
+	}
+}
+
 func WithAccumulatePool(wp *pool.WorkerPool) opt {
 	return func(p *Poller) {
 		p.accumulatePool = wp
