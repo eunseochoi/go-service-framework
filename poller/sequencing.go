@@ -78,6 +78,7 @@ func (p *Poller) getRemoteChaintip(ctx context.Context) (uint64, error) {
 		}
 		return nil
 	}, nil)
+	p.metrics.Gauge(fmt.Sprintf("%s-poller-chaintip", p.cfg.Blockchain), float64(chainTip), []string{}, 1.0)
 	return chainTip, err
 }
 
