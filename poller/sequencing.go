@@ -2,6 +2,7 @@ package poller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/coherentopensource/go-service-framework/retry"
@@ -61,6 +62,7 @@ func (p *Poller) getCurrentChaintip(ctx context.Context) (uint64, error) {
 // setCurrentChaintip overwrites the current cached local chaintip value
 func (p *Poller) setCurrentChaintip(ctx context.Context, newTip uint64) error {
 	return retry.Exec(p.cfg.HttpRetries, func() error {
+		p.metrics.Count(fmt.Sprintf("%s-poller-cursor", p.cfg.Blockchain), int64(newTip), []string{}, 1.0)
 		return p.cache.SetCurrentBlockNumber(ctx, p.cacheKey(), newTip)
 	}, nil)
 }
