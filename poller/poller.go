@@ -67,6 +67,9 @@ func New(cfg *Config, driver Driver, opts ...opt) *Poller {
 
 	p.cursorKey = strings.TrimSpace(cfg.CursorKey)
 	if p.cursorKey == "" {
+		if p.cfg.IsTraceBackfill {
+			p.logger.Fatal("cursor key must be set when trace backfill is enabled")
+		}
 		p.cursorKey = fmt.Sprintf("%s-%s", p.driver.Blockchain(), constants.BlockKey)
 	}
 
