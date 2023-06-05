@@ -13,4 +13,5 @@ const (
 	Ethereum            Blockchain = "ethereum"
 	Optimism            Blockchain = "optimism"
 	Polygon             Blockchain = "polygon"
+	Arbitrum            Blockchain = "arbitrum"
 )
